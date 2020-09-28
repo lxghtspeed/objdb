@@ -1,0 +1,30 @@
+{
+  "name": "objdb",
+  "description": "A basic object that is being saved automatically.",
+  "version": "1.5.7",
+  "license": "ISC",
+  "main": "build/index.js",
+  "scripts": {
+    "start": "node start"
+  },
+  "bundleDependencies": false,
+  "deprecated": false,
+  "devDependencies": {
+    "@types/node": "^14.0.13",
+    "discord.js": "^12.2.0",
+    "@types/ws": "^7.2.6"
+  },
+  "keywords": [
+    "database",
+    "db",
+    "data",
+    "base",
+    "obj",
+    "object",
+    "table",
+    "auto",
+    "save",
+    "file"
+  ],
+  "dependencies": {}
+}
