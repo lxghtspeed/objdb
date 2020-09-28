@@ -55,6 +55,14 @@ export interface Serialized {
 	references: ObjectType[];
 }
 
+export class SerializationError extends Error {
+
+	constructor(what: string) {
+		super(`${what} is not serializable`);
+	}
+
+}
+
 export class Serializer {
 
 	public readonly prototypes: PrototypeList;
@@ -71,7 +79,24 @@ export class Serializer {
 	}
 
 	
-	public static typeCheck(value?: any): PrimitiveTypeId | void {
+	private static typeCheck(value?: any): PrimitiveTypeId | string {
+		const t = typeof value;
+
+		if (t === 'function') throw new SerializationError(t);
+
+		if (t === 'symbol') throw new SerializationError(t);
+
+		if (value instanceof WeakMap) throw new SerializationError('WeakMap');
+
+		if (value instanceof WeakSet) throw new SerializationError('WeakSet');
+
+		if (value === null) return PrimitiveTypeId.null;
+
+		if (t === 'undefined') return PrimitiveTypeId.undefined;
+
+		if (t === 'object') return value.constructor.name;
+
+		return PrimitiveTypeId[t];
 	}
 	
 	private static serialize(value: any, serialized: Serialized, references: Object[], isMain: boolean): void {
