@@ -4,7 +4,7 @@ import Path from 'path';
 import { promises as FileSystemAsync } from 'fs';
 import { EventEmitter } from 'events';
 import { Comparison, Internal } from './utility';
-import { Serializer } from './serialization';
+import { Serializer } from './serialization-legacy';
 
 class DatabaseInternal {
 
