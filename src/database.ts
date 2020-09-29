@@ -4,7 +4,8 @@ import Path from 'path';
 import { promises as FileSystemAsync } from 'fs';
 import { EventEmitter } from 'events';
 import { Comparison, Internal } from './utility';
-import { Serializer } from './serialization-legacy';
+import { Serializer as SerializerLegacy } from './serialization/legacy';
+import { Serializer } from './serialization';
 
 class DatabaseInternal {
 
@@ -12,6 +13,8 @@ class DatabaseInternal {
 
 	public readonly path: string;
 
+	public readonly serializerLegacy = new SerializerLegacy();
+	
 	public readonly serializer = new Serializer();
 
 	public readonly watcher = new EventEmitter();
@@ -113,9 +116,13 @@ export class LocalFile extends Internal<DatabaseInternal> {
 	}
 
 	private async watchFile(): Promise<void> {
-		if (!this.internal.exists()) return;
+		if (!this.internal.exists()) {
+			return;
+		}
 
-		if ((await this.internal.stats()).mtime <= this.internal.time) return;
+		if ((await this.internal.stats()).mtime <= this.internal.time) {
+			return;
+		}
 
 		let data: any;
 
@@ -124,12 +131,14 @@ export class LocalFile extends Internal<DatabaseInternal> {
 		} catch (e) {
 			if (this.internal.tries < this.internal.maxTries) {
 				this.internal.tries++;
+				
 				setTimeout(() => this.watchFile(), 100);
-			} else {
-				this.internal.tries = 0;
-				await this.save();
+				return;
 			}
+			
+			this.internal.tries = 0;
 
+			await this.save();
 			return;
 		}
 
@@ -137,7 +146,9 @@ export class LocalFile extends Internal<DatabaseInternal> {
 		this.internal.time = new Date();
 		const comparison = new Comparison(this.internal.data, data);
 
-		if (comparison.keys === undefined) return;
+		if (comparison.keys === undefined) {
+			return;
+		}
 
 		comparison.applyTo(this);
 		this.internal.data = Comparison.clone(this);
@@ -147,7 +158,9 @@ export class LocalFile extends Internal<DatabaseInternal> {
 	private async watchInternal(): Promise<void> {
 		const comparison = new Comparison(this.internal.data, this);
 
-		if (comparison.keys === undefined) return;
+		if (comparison.keys === undefined) {
+			return;
+		}
 
 		this.internal.watcher.emit('change', comparison.keys, comparison.values);
 		await this.watchFile();
@@ -157,7 +170,9 @@ export class LocalFile extends Internal<DatabaseInternal> {
 	private watchInternalSync(): void {
 		const comparison = new Comparison(this.internal.data, this);
 
-		if (comparison.keys === undefined) return;
+		if (comparison.keys === undefined) {
+			return;
+		}
 
 		this.internal.watcher.emit('change', comparison.keys, comparison.values);
 		this.saveSync();
@@ -166,7 +181,9 @@ export class LocalFile extends Internal<DatabaseInternal> {
 	private async save(): Promise<void> {
 		const serialized = this.internal.serializer.serialize(this);
 
-		if (!FileSystem.existsSync(this.internal.path)) await FileSystemAsync.mkdir(this.internal.path);
+		if (!FileSystem.existsSync(this.internal.path)) {
+			await FileSystemAsync.mkdir(this.internal.path);
+		}
 
 		await FileSystemAsync.writeFile(this.internal.filePath, serialized);
 
@@ -177,7 +194,9 @@ export class LocalFile extends Internal<DatabaseInternal> {
 	private saveSync(): void {
 		const serialized = this.internal.serializer.serialize(this);
 
-		if (!FileSystem.existsSync(this.internal.path)) FileSystem.mkdirSync(this.internal.path);
+		if (!FileSystem.existsSync(this.internal.path)) {
+			FileSystem.mkdirSync(this.internal.path);
+		}
 
 		FileSystem.writeFileSync(this.internal.filePath, serialized);
 
