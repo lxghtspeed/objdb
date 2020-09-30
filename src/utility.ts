@@ -1,7 +1,7 @@
 import ZLib from 'zlib';
 import Util from 'util';
 
-const internals = new WeakMap<Internal<any> | typeof Internal, any>();
+const internals: WeakMap<Internal<any> | typeof Internal, any> = new WeakMap();
 
 export class Internal<T> {
 
@@ -41,7 +41,7 @@ export class Brotli
 
 export class PrototypeList {
 
-    private readonly prototypes = new Map<string | object, object | string>();
+    private readonly prototypes: Map<string | object, object | string> = new Map();
 
     constructor(constructors: Function[]) {
         constructors.forEach(constructor => {
@@ -77,7 +77,7 @@ export class PrototypeList {
 
         if (this.prototypes.has(constructor.name)) {
             const prototype = <object> this.prototypes.get(constructor.name);
-            
+
             this.prototypes.delete(prototype);
             this.prototypes.delete(constructor.name);
         }
@@ -129,7 +129,7 @@ export class Version {
 	/**
 	 * Compares this version with another
 	 * @param version The version to compare with
-	 * @returns Compatible ?
+	 * @returns Compatible
 	 */
 	public compatible(version: Version): boolean {
 		for (let i = 0; i < this.value.length; i++) {
@@ -148,6 +148,14 @@ export class Version {
 
 }
 
+export class VersionError extends Error {
+
+	constructor(expected: string, got?: string) {
+		super(`Expected version: ${expected}, got ${got || 'unknown version'} (incompatible)`);
+	}
+
+}
+
 export interface Changes extends Map<any, true | Changes> {}
 
 export class Comparison {
@@ -161,6 +169,7 @@ export class Comparison {
 	 * Compares two objects by getting differences from one to another
 	 * @param from The object to compare from
 	 * @param to The object to compare to
+	 * @deprecated
 	 */
 	constructor(from: any, to: any) {
 		this.from = Comparison.clone(from);
@@ -174,33 +183,65 @@ export class Comparison {
 	 * @param value The value to clone
 	 * @returns A clone of the input value
 	 */
-	public static clone(value: any): any {
-		if (!(value instanceof Object)) return value;
+	public static clone(value: any, references: Map<any, any> = new Map()): any {
+		if (!(value instanceof Object)) {
+			return value;
+		}
 
-		if (typeof value === 'function' || typeof value === 'symbol') return value;
+		if (typeof value === 'function' || typeof value === 'symbol') {
+			return value;
+		}
 
-		const prototype = Object.getPrototypeOf(value);
-		let clone: any;
+		if (references.has(value)) {
+			return references.get(value);
+		}
+
+		const prototype: any = Object.getPrototypeOf(value);
+		let clone: any = {};
 
 		if (value instanceof Map) {
-			const c = new Map();
-
-			for (const [k, v] of value) c.set(Comparison.clone(k), Comparison.clone(v));
-
-			clone = c;
-		} else if (value instanceof Set) {
-			const c = new Set();
-
-			for (const flag of value) c.add(flag);
-		} else if (value instanceof Buffer) {
-			clone = Buffer.from(value);
-		} else if (value instanceof Date) {
-			clone = new Date(value);
-		} else {
-			clone = {};
-
-			for (const key in value) clone[key] = Comparison.clone(value[key]);
+			clone = new Map();
 		}
+		
+		if (value instanceof Set) {
+			clone = new Set();
+		}
+		
+		if (value instanceof Buffer) {
+			clone = Buffer.from(value);
+		}
+		
+		if (value instanceof Date) {
+			clone = new Date(value);
+		}
+
+		if (value instanceof Array) {
+			clone = [];
+		}
+
+		if (value instanceof String) {
+			clone = new String();
+		}
+
+		if (value instanceof Number) {
+			clone = new Number();
+		}
+
+		if (value instanceof Boolean) {
+			clone = new Boolean();
+		}
+
+		references.set(value, clone);
+
+		if (value instanceof Set) {
+			for (const v of value) clone.add(Comparison.clone(v, references));
+		}
+
+		if (value instanceof Map) {
+			for (const [k, v] of value) clone.set(Comparison.clone(k, references), Comparison.clone(v, references));
+		}
+
+		for (const key in value) clone[key] = Comparison.clone(value[key], references);
 
 		return Object.setPrototypeOf(clone, prototype);
 	}
@@ -210,6 +251,7 @@ export class Comparison {
 	 * @param keys The differences keys
 	 * @param values The differences values
 	 * @param to The object to be applied to
+	 * @deprecated
 	 */
 	public static applyTo(keys: true | Changes | undefined, values: any, to: any): any {
 		if (keys === undefined || to === values) return to;
@@ -259,6 +301,7 @@ export class Comparison {
 	 * @param keys The differences keys
 	 * @param values The differences values
 	 * @param to The object to be applied to
+	 * @deprecated
 	 */
 	public static removeFrom(keys: true | Changes | undefined, values: any, to: any): any {
 		if (keys === undefined || to === values) return to;
@@ -281,7 +324,7 @@ export class Comparison {
 		} else if (to instanceof Set && values instanceof Set) {
 			for (const [flag] of keys) to.delete(flag);
 		} else if (to instanceof Buffer && values instanceof Buffer) {
-			to = new Buffer(values);
+			to = Buffer.from(values);
 		} else if (to instanceof Date && values instanceof Date) {
 			to = new Date(values);
 		} else {
@@ -300,6 +343,7 @@ export class Comparison {
 	 * @package
 	 * @param from The object to compare from
 	 * @param to The object to compare to
+	 * @deprecated
 	 */
 	public static compare(from: any, to: any): true | Changes | undefined {
 		if (from === to) return undefined;
@@ -355,6 +399,7 @@ export class Comparison {
 	 * @param input The input to minify
 	 * @param keys The differences keys
 	 * @returns Minified input
+	 * @deprecated
 	 */
 	public static minify(input: any, keys: true | Changes | undefined): any {
 		if (keys === true) return input;
@@ -397,6 +442,7 @@ export class Comparison {
 	/**
 	 * Applies the differences to an object
 	 * @param to The object to be applied to
+	 * @deprecated
 	 */
 	public applyTo(to: any): any {
 		return Comparison.applyTo(this.keys, this.values, to);
@@ -405,6 +451,7 @@ export class Comparison {
 	/**
 	 * Removes the differences from an object
 	 * @param from The object to be applied to
+	 * @deprecated
 	 */
 	removeFrom(from: any): any {
 		return Comparison.removeFrom(this.keys, this.values, from);

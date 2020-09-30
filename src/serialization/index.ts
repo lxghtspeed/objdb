@@ -1,4 +1,4 @@
-import { PrototypeList } from "../utility";
+import { PrototypeList, VersionError } from "../utility";
 
 enum PrimitiveType {
 	undefined,
@@ -56,7 +56,7 @@ interface Serialized {
 	references: ObjectPrimitive[];
 }
 
-class SerializationError extends Error {
+export class SerializationError extends Error {
 
 	constructor(what: string) {
 		super(`${what} is not serializable`);
@@ -70,6 +70,8 @@ export class Serializer {
 
 	public static readonly version = '1.0';
 
+	public static bufferFix: string[] = Object.getOwnPropertyNames(Buffer.prototype);
+
 	constructor(constructors: Function[] = []) {
 		this.prototypes = new PrototypeList([
 			Object, Date, Map,
@@ -77,6 +79,74 @@ export class Serializer {
 			String, Boolean, Number,
 			RegExp, ...constructors
 		]);
+	}
+
+	/**
+	 * Clones objects instances
+	 * @param value The value to clone
+	 * @returns A clone of the value
+	 */
+	public static clone(value: any, references: Map<any, any> = new Map()): any {
+		if (!(value instanceof Object)) {
+			return value;
+		}
+
+		if (typeof value === 'function' || typeof value === 'symbol') {
+			return value;
+		}
+
+		if (references.has(value)) {
+			return references.get(value);
+		}
+
+		const prototype: any = Object.getPrototypeOf(value);
+		let clone: any = {};
+
+		if (value instanceof Map) {
+			clone = new Map();
+		}
+		
+		if (value instanceof Set) {
+			clone = new Set();
+		}
+		
+		if (value instanceof Buffer) {
+			clone = Buffer.from(value);
+		}
+		
+		if (value instanceof Date) {
+			clone = new Date(value);
+		}
+
+		if (value instanceof Array) {
+			clone = [];
+		}
+
+		if (value instanceof String) {
+			clone = new String();
+		}
+
+		if (value instanceof Number) {
+			clone = new Number();
+		}
+
+		if (value instanceof Boolean) {
+			clone = new Boolean();
+		}
+
+		references.set(value, clone);
+
+		if (value instanceof Set) {
+			for (const v of value) clone.add(Serializer.clone(v, references));
+		}
+
+		if (value instanceof Map) {
+			for (const [k, v] of value) clone.set(Serializer.clone(k, references), Serializer.clone(v, references));
+		}
+
+		for (const key in value) clone[key] = Serializer.clone(value[key], references);
+
+		return Object.setPrototypeOf(clone, prototype);
 	}
 	
 	private static typeCheck(value?: any): PrimitiveType | string {
@@ -161,6 +231,10 @@ export class Serializer {
 					const index = Number(key);
 
 					if (Math.floor(index) === index && index <= value.length) {
+						continue;
+					}
+
+					if (isNaN(index) && Serializer.bufferFix.includes(key)) {
 						continue;
 					}
 				}
@@ -321,7 +395,7 @@ export class Serializer {
 		const serialized: Serialized = JSON.parse(data);
 
 		if (!serialized || serialized.version !== Serializer.version) {
-			throw new Error('Version not compatible');
+			throw new VersionError(Serializer.version, serialized.version);
 		}
 
 		return Serializer.deserialize(serialized, references, this.prototypes);

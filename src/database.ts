@@ -3,7 +3,7 @@ import Timers from 'timers';
 import Path from 'path';
 import { promises as FileSystemAsync } from 'fs';
 import { EventEmitter } from 'events';
-import { Comparison, Internal } from './utility';
+import { Internal, VersionError } from './utility';
 import { Serializer as SerializerLegacy } from './serialization/legacy';
 import { Serializer } from './serialization';
 
@@ -13,19 +13,13 @@ class DatabaseInternal {
 
 	public readonly path: string;
 
-	public readonly serializerLegacy = new SerializerLegacy();
-	
-	public readonly serializer = new Serializer();
+	public readonly serializer: Serializer = new Serializer();
 
-	public readonly watcher = new EventEmitter();
+	public readonly watcher: EventEmitter = new EventEmitter();
 
-	public data!: any;
+	public data!: string;
 
-	public time = new Date();
-
-	public maxTries = 5;
-
-	public tries = 0;
+	public time: Date = new Date();
 
 	constructor(path: string, name: string) {
 		this.path = Path.resolve(path);
@@ -36,8 +30,8 @@ class DatabaseInternal {
 	 * Obtains the datas stored in the database's file
 	 */
 	public async read(): Promise<any> {
-		const rawData = (await FileSystemAsync.readFile(this.filePath)).toString();
-		const data = this.serializer.deserialize(rawData);
+		const rawData: string = (await FileSystemAsync.readFile(this.filePath)).toString();
+		const data: any = this.serializer.deserialize(rawData);
 
 		return data instanceof Object ? data : {};
 	}
@@ -76,132 +70,94 @@ export class LocalFile extends Internal<DatabaseInternal> {
 	[key: string]: any;
 	[index: number]: any;
 
-	public static defaultPath = Path.resolve('./data');
+	public static defaultPath: string = Path.resolve('./data');
 
 	/**
 	 * @param options The options
 	 */
 	constructor(options: DatabaseOptions = {}) {
-		const name = typeof options.name === 'string' ? options.name : 'default';
-		const path = typeof options.path === 'string' ? options.path : LocalFile.defaultPath;
-		const internal = new DatabaseInternal(path, name);
+		const name: string = typeof options.name === 'string' ? options.name : 'default';
+		const path: string = typeof options.path === 'string' ? options.path : LocalFile.defaultPath;
+		const internal: DatabaseInternal = new DatabaseInternal(path, name);
+		const serializerLegacy: SerializerLegacy = new SerializerLegacy();
 
 		if (options.constructors instanceof Array) {
 			for (const ctr of options.constructors) {
 				internal.serializer.prototypes.add(ctr);
+				serializerLegacy.prototypes.add(ctr);
 			}
 		}
 
 		super(internal);
 
 		if (FileSystem.existsSync(internal.filePath)) {
-			const rawData = FileSystem.readFileSync(internal.filePath).toString();
-			const data = internal.serializer.deserialize(rawData);
+			const rawData: string = FileSystem.readFileSync(internal.filePath).toString();
+			let data: any;
+
+			try {
+				data = internal.serializer.deserialize(rawData);
+			} catch (e) {
+				if (!(e instanceof VersionError)) {
+					throw e;
+				}
+				
+				data = serializerLegacy.deserialize(rawData);
+			}
 
 			for (const key in data) this[key] = data[key];
 		}
 
 		if (options.defaults instanceof Object) {
-			const defaults = options.defaults;
+			const defaults: any = options.defaults;
 
 			for (const key in defaults) if (!(key in this)) this[key] = defaults[key];
 		}
 
-		internal.data = Comparison.clone(this);
+		internal.data = internal.serializer.serialize(this);
 
-		Timers.setInterval(() => this.watchFile(), 5000).unref();
-		Timers.setInterval(() => this.watchInternal(), 2500).unref();
-		process.once('exit', () => this.watchInternalSync());
-		process.nextTick(() => this.watchInternal());
+		Timers.setInterval(() => this.watch(), 2500).unref();
+		process.once('exit', () => this.watchSync());
+		process.nextTick(() => this.watch());
 	}
 
-	private async watchFile(): Promise<void> {
-		if (!this.internal.exists()) {
-			return;
+	private async watch(): Promise<void> {
+		const a: string = this.internal.data;
+		const b: string = this.internal.serializer.serialize(this);
+
+		if (a !== b) {
+			await this.save(b);
 		}
-
-		if ((await this.internal.stats()).mtime <= this.internal.time) {
-			return;
-		}
-
-		let data: any;
-
-		try {
-			data = await this.internal.read();
-		} catch (e) {
-			if (this.internal.tries < this.internal.maxTries) {
-				this.internal.tries++;
-				
-				setTimeout(() => this.watchFile(), 100);
-				return;
-			}
-			
-			this.internal.tries = 0;
-
-			await this.save();
-			return;
-		}
-
-		this.internal.tries = 0;
-		this.internal.time = new Date();
-		const comparison = new Comparison(this.internal.data, data);
-
-		if (comparison.keys === undefined) {
-			return;
-		}
-
-		comparison.applyTo(this);
-		this.internal.data = Comparison.clone(this);
-		this.internal.watcher.emit('change', comparison.keys, comparison.values);
 	}
 
-	private async watchInternal(): Promise<void> {
-		const comparison = new Comparison(this.internal.data, this);
+	private watchSync(): void {
+		const a: string = this.internal.data;
+		const b: string = this.internal.serializer.serialize(this);
 
-		if (comparison.keys === undefined) {
-			return;
+		if (a !== b) {
+			this.saveSync(b);
 		}
-
-		this.internal.watcher.emit('change', comparison.keys, comparison.values);
-		await this.watchFile();
-		await this.save();
 	}
 
-	private watchInternalSync(): void {
-		const comparison = new Comparison(this.internal.data, this);
-
-		if (comparison.keys === undefined) {
-			return;
-		}
-
-		this.internal.watcher.emit('change', comparison.keys, comparison.values);
-		this.saveSync();
-	}
-
-	private async save(): Promise<void> {
-		const serialized = this.internal.serializer.serialize(this);
-
+	private async save(serialized: string): Promise<void> {
 		if (!FileSystem.existsSync(this.internal.path)) {
-			await FileSystemAsync.mkdir(this.internal.path);
+			await FileSystemAsync.mkdir(this.internal.path, {recursive: true});
 		}
 
 		await FileSystemAsync.writeFile(this.internal.filePath, serialized);
 
 		this.internal.time = new Date();
-		this.internal.data = Comparison.clone(this);
+		this.internal.data = serialized;
 	}
 
-	private saveSync(): void {
-		const serialized = this.internal.serializer.serialize(this);
-
+	private saveSync(serialized: string): void {
 		if (!FileSystem.existsSync(this.internal.path)) {
-			FileSystem.mkdirSync(this.internal.path);
+			FileSystem.mkdirSync(this.internal.path, {recursive: true});
 		}
 
 		FileSystem.writeFileSync(this.internal.filePath, serialized);
 
 		this.internal.time = new Date();
-		this.internal.data = Comparison.clone(this);
+		this.internal.data = serialized;
 	}
 
 }

@@ -1,7 +1,7 @@
 {
   "name": "objdb",
   "description": "A basic object that is being saved automatically.",
-  "version": "1.5.7",
+  "version": "1.6.1",
   "license": "ISC",
   "main": "build/index.js",
   "scripts": {

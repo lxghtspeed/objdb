@@ -14,7 +14,7 @@ Requires **Node 10** and later
 - [x] Stores in a local file
 - [x] Easy prototype restoring
 - [x] Provides own serialization API
-- [ ] Support of circular objects and multiple referenced objects
+- [x] Support of circular structured objects and objects that are referenced several times
 - [ ] Client and Server: remotely operate over the datas
 
 ## Supported data types
@@ -128,7 +128,7 @@ console.log(o2);
 
 /* Output:
  *   { '0': /ab+c/i, testing: Infinity, serialization: <Buffer 61 73 64> }
- *   ["object","Object",[["key","0",["object","RegExp",[],"ab+c","i"]],["key","testing",["number","Infinity"]],["key","serialization",["object","Buffer",[],"YXNk"]]]]
+ *   {"version":"1.0","value":0,"references":[["Object",[[0,"0",1],[0,"testing",[3,"Infinity"]],[0,"serialization",2]]],["RegExp",[],"ab+c","i"],["Buffer",[],"YXNk"]]}
  *   { '0': /ab+c/i, testing: Infinity, serialization: <Buffer 61 73 64> }
  */
 ```
