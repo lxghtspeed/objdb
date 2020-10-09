@@ -1,42 +1,36 @@
-import { LocalFile } from './database';
-import { Collection, Snowflake } from 'discord.js';
+import { Serializer } from "./serialization";
 
-interface Ban {
-	id: Snowflake;
-	expires: number;
-	guild: Snowflake;
+class Restorable extends Map<any, any> {
+
+	public inf: number = Infinity;
+
+	public nothing: null = null;
+
+	public nothing2: undefined = undefined;
+
+	public regexp: RegExp = /a+bc/ig;
+
+	public now: Date = new Date();
+
 }
 
-interface Mute {
-	id: Snowflake;
-	expires: number;
-	channel: Snowflake;
-	role: Snowflake;
-	guild: Snowflake;
-}
-
-interface ChannelLogs {
-	id: Snowflake;
-	logs: string[]
-}
-
-interface ModDb extends LocalFile {
-	bans: Collection<Snowflake, Ban>;
-	mutes: Collection<Snowflake, Mute>;
-	logs: Collection<Snowflake, ChannelLogs>;
-}
-
-export class Main {
+export class TestZone {
 
 	public static main(args: string[]): void {
-		const db: ModDb = <any> new LocalFile({
-			name: 'modDb',
-			constructors: [Collection]
-		});
+		console.log('running test');
+		console.log('args: ', args);
 
-		db.logs.first()?.logs.push('test')
+		const s = new Serializer([Restorable]);
+		const o: Restorable = new Restorable();
 
-		console.log(db.logs.first())
+		o.set(new Map([[Date.now(), 'test']]), new Set(['ended']));
+
+		const x: string = s.serialize(o);
+		const o2: Restorable = s.deserialize(x);
+
+		console.log(o);
+		console.log(JSON.parse(x));
+		console.log(o2);
 	}
 
 }

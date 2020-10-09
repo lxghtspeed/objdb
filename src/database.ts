@@ -2,52 +2,24 @@ import FileSystem from 'fs';
 import Timers from 'timers';
 import Path from 'path';
 import { promises as FileSystemAsync } from 'fs';
-import { EventEmitter } from 'events';
 import { Internal, VersionError } from './utility';
-import { Serializer as SerializerLegacy } from './serialization/legacy';
-import { Serializer } from './serialization';
+import { Serializer, SerializerLegacy } from './serialization';
 
-class DatabaseInternal {
+class DBInternal {
 
 	public readonly filePath: string;
 
 	public readonly path: string;
 
-	public readonly serializer: Serializer = new Serializer();
-
-	public readonly watcher: EventEmitter = new EventEmitter();
+	public readonly serializer: Serializer = new Serializer([Database, LocalFile]);
 
 	public data!: string;
 
-	public time: Date = new Date();
+	public static readonly opened: Map<string, Database> = new Map();
 
-	constructor(path: string, name: string) {
-		this.path = Path.resolve(path);
-		this.filePath = Path.join(this.path, name + '.json');
-	}
-
-	/**
-	 * Obtains the datas stored in the database's file
-	 */
-	public async read(): Promise<any> {
-		const rawData: string = (await FileSystemAsync.readFile(this.filePath)).toString();
-		const data: any = this.serializer.deserialize(rawData);
-
-		return data instanceof Object ? data : {};
-	}
-
-	/**
-	 * Checks if the database file exists
-	 */
-	public exists(): boolean {
-		return FileSystem.existsSync(this.filePath);
-	}
-
-	/**
-	 * Obtains the stats of the database file
-	 */
-	public stats(): Promise<FileSystem.Stats> {
-		return FileSystemAsync.stat(this.filePath);
+	constructor(path: string, filePath: string) {
+		this.path = path;
+		this.filePath = filePath;
 	}
 
 }
@@ -66,24 +38,28 @@ interface DatabaseOptions {
 	constructors?: Function[];
 }
 
-export class LocalFile extends Internal<DatabaseInternal> {
+export class Database extends Internal<DBInternal> {
 	[key: string]: any;
 	[index: number]: any;
 
 	public static defaultPath: string = Path.resolve('./data');
 
-	/**
-	 * @param options The options
-	 */
 	constructor(options: DatabaseOptions = {}) {
 		const name: string = typeof options.name === 'string' ? options.name : 'default';
-		const path: string = typeof options.path === 'string' ? options.path : LocalFile.defaultPath;
-		const internal: DatabaseInternal = new DatabaseInternal(path, name);
-		const serializerLegacy: SerializerLegacy = new SerializerLegacy();
+		const path: string = Path.resolve(typeof options.path === 'string' ? options.path : Database.defaultPath);
+		const filePath: string = Path.join(path, name + '.json');
+		const opened: Database | undefined = DBInternal.opened.get(filePath);
+
+		if (opened) {
+			return opened;
+		}
+
+		const internal: DBInternal = new DBInternal(path, filePath);
+		const serializerLegacy: SerializerLegacy = new SerializerLegacy([Database, LocalFile]);
 
 		if (options.constructors instanceof Array) {
 			for (const ctr of options.constructors) {
-				internal.serializer.prototypes.add(ctr);
+				internal.serializer.constructors.push(ctr);
 				serializerLegacy.prototypes.add(ctr);
 			}
 		}
@@ -104,20 +80,26 @@ export class LocalFile extends Internal<DatabaseInternal> {
 				data = serializerLegacy.deserialize(rawData);
 			}
 
-			for (const key in data) this[key] = data[key];
+			for (const key in data) {
+				this[key] = data[key];
+			}
 		}
 
 		if (options.defaults instanceof Object) {
 			const defaults: any = options.defaults;
 
-			for (const key in defaults) if (!(key in this)) this[key] = defaults[key];
+			for (const key in defaults) {
+				if (!(key in this)) {
+					this[key] = defaults[key];
+				}
+			}
 		}
 
 		internal.data = internal.serializer.serialize(this);
 
-		Timers.setInterval(() => this.watch(), 2500).unref();
-		process.once('exit', () => this.watchSync());
-		process.nextTick(() => this.watch());
+		DBInternal.opened.set(filePath, this);
+		Timers.setInterval(() => this.watch(), 16000).unref();
+		process.on('exit', () => this.watchSync());
 	}
 
 	private async watch(): Promise<void> {
@@ -145,7 +127,6 @@ export class LocalFile extends Internal<DatabaseInternal> {
 
 		await FileSystemAsync.writeFile(this.internal.filePath, serialized);
 
-		this.internal.time = new Date();
 		this.internal.data = serialized;
 	}
 
@@ -156,8 +137,9 @@ export class LocalFile extends Internal<DatabaseInternal> {
 
 		FileSystem.writeFileSync(this.internal.filePath, serialized);
 
-		this.internal.time = new Date();
 		this.internal.data = serialized;
 	}
 
 }
+
+class LocalFile extends Database {} // Fix for legacy databases

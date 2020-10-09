@@ -33,79 +33,38 @@ You can not use these types inside a database
 # Examples
 ## Understanding
 ```js
-const { LocalFile } = require('objdb');
+const { Database } = require('objdb');
 
-const drift = new LocalFile({
-	name: 'drift',
-	defaults: {
-		records: []
-	}
-});
+const test = new Database(); // Stored in ./data/default.json
+// Note: It does not save unless you modify
 
-/* Adds some random records */
-for (let i = 0; i < 10; i++) {
-
-    drift.records.push({
-        user: `User${Math.floor(Math.random() * 2000)}`,
-        score: Math.floor(Math.random() * 50000)
-    });
-
-}
-
-/* Sorts the records by score */
-drift.records.sort((a, b) => b.score - a.score);
-
-/* Shows a top-10 of the records */
-console.log(drift.records.slice(0, 10));
+test.success = true;
+test.some = {};
+test.some.more = ['d', 'a', 't', 'a', 's'];
 ```
 
 ## Prototype restoring system
 ```js
-const { LocalFile } = require('objdb');
+const { Database } = require('objdb');
 
-class Item {
-
-	constructor(name = 'Unknown', durability = Infinity, price = 0) {
-		this.name = name;
-		this.durability = durability;
-		this.price = price;
-	}
-
-	use() {
-		if (this.durability <= 0) return console.log(`This ${this.name} is out of durability`);
-		
-		this.durability--;
-
-		console.log(`You used ${this.name}`);
-	}
-
-}
+class Player { /* Imagination */ }
+class Sword { /* Imagination */ }
 
 /* Initialize the database */
-const db = new LocalFile({
-	name: 'data',
+const db = new Database({
 	defaults: {
-		inventory: []
+		players: new Map();
 	},
-	constructors: [ Item ] /* We `in`sert the constructor Item */
+	/* Add the constructors here */
+	constructors: [ Player, Sword ]
 });
 
-/* A magic book that we can use only twice */
-const item = new Item('Magic Book', 2);
+const p1 = db.players.get('xXProKillerXx');
+const p2 = db.players.get('Imagination');
 
-/* Save the magic book */
-db.inventory.push(item);
+const sword = p1.inventory[0];
 
-/* Try to use all the magic books */
-db.inventory.forEach(i => i.use());
-
-/* Output at the 5th launch:
- *   This Magic Book is out of durability
- *   This Magic Book is out of durability
- *   This Magic Book is out of durability
- *   You used Magic Book
- *   You used Magic Book
- */
+p1.attack(p2, sword);
 ```
 
 ## Serialization API

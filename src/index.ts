@@ -1,4 +1,3 @@
-export { Main as EntryPoint } from './tests';
-export { LocalFile } from './database';
-export { Serializer } from './serialization';
-export { Serializer as SerializerLegacy } from './serialization/legacy';
+export { Database as LocalFile, Database } from './database';
+export * from './serialization';
+export * from './tests';

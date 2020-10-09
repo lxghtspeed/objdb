@@ -1,4 +1,5 @@
 import { PrototypeList } from '../utility';
+import { SerializationError } from '.';
 
 interface Element<T extends 'object' | 'bigint' | 'number' | 'boolean' | 'string' | 'undefined' | 'null'> extends Array<any> {
 	[0]: T;
@@ -23,15 +24,7 @@ interface KeyContainer {
 	[2]: Element<any>;
 }
 
-class SerializationError extends Error {
-
-	constructor(what: string) {
-		super(`${what} is not serializable`);
-	}
-
-}
-
-export class Serializer {
+export class SerializerLegacy {
 
 	private static types = ['null', 'undefined', 'string', 'boolean', 'number', 'bigint', 'object'];
 	
@@ -97,14 +90,14 @@ export class Serializer {
 			} else if (value instanceof Map) {
 				value.forEach((v: any, k: any) => {
 					const container: Container = ['co', ['null'], ['null']];
-					container[1] = Serializer.serialize(k);
-					container[2] = Serializer.serialize(v);
+					container[1] = SerializerLegacy.serialize(k);
+					container[2] = SerializerLegacy.serialize(v);
 
 					e[2].push(container);
 				});
 			} else if (value instanceof Set) {
 				value.forEach((v: any) => {
-					e[2].push(Serializer.serialize(v));
+					e[2].push(SerializerLegacy.serialize(v));
 				});
 			} else if (value instanceof Array) {
 				for (let i = 0; i < value.length; i++) {
@@ -113,7 +106,7 @@ export class Serializer {
 					}
 
 					validIndex.push(i.toString());
-					e[2].push(Serializer.serialize(value[i]));
+					e[2].push(SerializerLegacy.serialize(value[i]));
 				}
 			}
 
@@ -124,7 +117,7 @@ export class Serializer {
 				
 				const container: KeyContainer = ['key', '', ['null']];
 				container[1] = key;
-				container[2] = Serializer.serialize(value[key]);
+				container[2] = SerializerLegacy.serialize(value[key]);
 				
 				e[2].push(container);
 			}
@@ -138,13 +131,13 @@ export class Serializer {
 	 * @param value the value to serialize
 	 */
 	public serialize(value: any): string {
-		return JSON.stringify(Serializer.serialize(value));
+		return JSON.stringify(SerializerLegacy.serialize(value));
 	}
 
 	private static deserialize(e: Element<'null' | 'undefined' | 'string' | 'boolean' | 'object' | 'bigint' | 'number'>, prototypes: PrototypeList): any {
 		const t = e[0];
 
-		if (!Serializer.types.includes(t)) throw new Error(`Invalid type '${t}'`);
+		if (!SerializerLegacy.types.includes(t)) throw new Error(`Invalid type '${t}'`);
 
 		if (t === 'null') {
 			return null;
@@ -178,15 +171,15 @@ export class Serializer {
 				e[2] && (<ObjectElement> e)[2].forEach(c => {
 					if (c[0] === 'co') {
 						const x = <Container> c;
-						const key = Serializer.deserialize(x[1], prototypes);
-						const value = Serializer.deserialize(x[2], prototypes);
+						const key = SerializerLegacy.deserialize(x[1], prototypes);
+						const value = SerializerLegacy.deserialize(x[2], prototypes);
 				  
 						o.set(key, value);
 					} else if (c[0] === 'key') {
 						const x = <KeyContainer> c;
 						const key = x[1];
 						const value = x[2];
-						(<any> o)[key] = Serializer.deserialize(value, prototypes);
+						(<any> o)[key] = SerializerLegacy.deserialize(value, prototypes);
 					}
 				});
 				Object.setPrototypeOf(o, prototype);
@@ -200,8 +193,8 @@ export class Serializer {
 						const x = <KeyContainer> c;
 						const key = x[1];
 						const value = x[2];
-						(<any> o)[key] = Serializer.deserialize(value, prototypes);
-					} else o.add(Serializer.deserialize(<Element<any>> c, prototypes));
+						(<any> o)[key] = SerializerLegacy.deserialize(value, prototypes);
+					} else o.add(SerializerLegacy.deserialize(<Element<any>> c, prototypes));
 				});
 				Object.setPrototypeOf(o, prototype);
 				
@@ -220,7 +213,7 @@ export class Serializer {
 					const x = <KeyContainer> c;
 					const key = x[1];
 					const value = x[2];
-					(<any> o)[key] = Serializer.deserialize(value, prototypes);
+					(<any> o)[key] = SerializerLegacy.deserialize(value, prototypes);
 				});
 
 				return o;
@@ -235,7 +228,7 @@ export class Serializer {
 					const x = <KeyContainer> c;
 					const key = x[1];
 					const value = x[2];
-					(<any> o)[key] = Serializer.deserialize(value, prototypes);
+					(<any> o)[key] = SerializerLegacy.deserialize(value, prototypes);
 				});
 				Object.setPrototypeOf(o, prototype);
 
@@ -255,7 +248,7 @@ export class Serializer {
 					const x = <KeyContainer> c;
 					const key = x[1];
 					const value = x[2];
-					(<any> o)[key] = Serializer.deserialize(value, prototypes);
+					(<any> o)[key] = SerializerLegacy.deserialize(value, prototypes);
 				});
 				Object.setPrototypeOf(o, prototype);
 				
@@ -275,7 +268,7 @@ export class Serializer {
 					const x = <KeyContainer> c;
 					const key = x[1];
 					const value = x[2];
-					(<any> o)[key] = Serializer.deserialize(value, prototypes);
+					(<any> o)[key] = SerializerLegacy.deserialize(value, prototypes);
 				});
 				
 				Object.setPrototypeOf(o, prototype);
@@ -289,8 +282,8 @@ export class Serializer {
 						const x = <KeyContainer> c;
 						const key = x[1];
 						const value = x[2];
-						(<any> o)[key] = Serializer.deserialize(value, prototypes);
-					} else o.push(Serializer.deserialize(<Element<any>> c, prototypes));
+						(<any> o)[key] = SerializerLegacy.deserialize(value, prototypes);
+					} else o.push(SerializerLegacy.deserialize(<Element<any>> c, prototypes));
 				});
 				Object.setPrototypeOf(o, prototype);
 				
@@ -304,7 +297,7 @@ export class Serializer {
 					const x = <KeyContainer> c;
 					const key = x[1];
 					const value = x[2];
-					o[key] = Serializer.deserialize(value, prototypes);
+					o[key] = SerializerLegacy.deserialize(value, prototypes);
 				});
 				Object.setPrototypeOf(o, prototype);
 				
@@ -320,7 +313,7 @@ export class Serializer {
 	public deserialize(data: string): any {
 		const e: Element<any> = JSON.parse(data);
 
-		return Serializer.deserialize(e, this.prototypes);
+		return SerializerLegacy.deserialize(e, this.prototypes);
 	}
 
 }

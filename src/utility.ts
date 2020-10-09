@@ -17,8 +17,6 @@ export class Internal<T> {
 	 * Obtains the internal object of the current object
 	 */
 	protected get internal(): T {
-		if (!internals.has(this)) internals.set(this, {});
-
 		return internals.get(this);
 	}
 
@@ -26,9 +24,15 @@ export class Internal<T> {
 	 * Obtains the internal object of the current object (static)
 	 */
 	protected static get internal(): any {
-		if (!internals.has(this)) internals.set(this, {});
+		let internal: any = internals.get(this);
 
-		return internals.get(this);
+		if (!internal) {
+			internal = {};
+
+			internals.set(this, internal);
+		}
+
+		return internal;
 	}
 
 }

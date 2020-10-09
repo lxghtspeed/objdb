@@ -1,4 +1,5 @@
-import { PrototypeList, VersionError } from "../utility";
+import { VersionError } from "../utility";
+export * from './legacy';
 
 enum PrimitiveType {
 	undefined,
@@ -10,9 +11,9 @@ enum PrimitiveType {
 }
 
 enum ContainerType {
-	object,
-	map,
-	set
+	Object,
+	Map,
+	Set
 }
 
 type Reference = number;
@@ -24,7 +25,7 @@ interface Primitive extends Array<any> {
 
 interface ObjectPrimitive extends Array<any> {
 	[0]: string;
-	[1]:(ObjectContainer | MapContainer | SetContainer)[];
+	[1]: (ObjectContainer | MapContainer | SetContainer)[];
 	[2]?: string;
 	[3]?: string;
 }
@@ -34,19 +35,19 @@ interface Container extends Array<any> {
 }
 
 interface ObjectContainer extends Container {
-	[0]: ContainerType.object;
+	[0]: ContainerType.Object;
 	[1]: string;
 	[2]: Reference | Primitive;
 }
 
 interface MapContainer extends Container {
-	[0]: ContainerType.map;
+	[0]: ContainerType.Map;
 	[1]: Reference | Primitive;
 	[2]: Reference | Primitive;
 }
 
 interface SetContainer extends Container {
-	[0]: ContainerType.set;
+	[0]: ContainerType.Set;
 	[1]: Reference | Primitive;
 }
 
@@ -66,19 +67,21 @@ export class SerializationError extends Error {
 
 export class Serializer {
 
-	public readonly prototypes: PrototypeList;
+	public readonly constructors: Function[];
 
-	public static readonly version = '1.0';
+	public static readonly defaultConstructors: Function[] = [
+		Object, Date, Map,
+		Set, Buffer, Array,
+		String, Boolean, Number,
+		RegExp
+	]
 
-	public static bufferFix: string[] = Object.getOwnPropertyNames(Buffer.prototype);
+	public static readonly version: string = '1.0';
+
+	private static readonly bufferFix: string[] = Object.keys(Buffer.prototype);
 
 	constructor(constructors: Function[] = []) {
-		this.prototypes = new PrototypeList([
-			Object, Date, Map,
-			Set, Buffer, Array,
-			String, Boolean, Number,
-			RegExp, ...constructors
-		]);
+		this.constructors = [...Serializer.defaultConstructors, ...constructors];
 	}
 
 	/**
@@ -86,12 +89,12 @@ export class Serializer {
 	 * @param value The value to clone
 	 * @returns A clone of the value
 	 */
-	public static clone(value: any, references: Map<any, any> = new Map()): any {
+	public static clone(value: any, references: Map<Object, Object> = new Map()): any {
 		if (!(value instanceof Object)) {
 			return value;
 		}
 
-		if (typeof value === 'function' || typeof value === 'symbol') {
+		if (typeof value === 'function') {
 			return value;
 		}
 
@@ -99,8 +102,8 @@ export class Serializer {
 			return references.get(value);
 		}
 
-		const prototype: any = Object.getPrototypeOf(value);
-		let clone: any = {};
+		const prototype: object | null = Object.getPrototypeOf(value);
+		let clone: any = Object.create(null);
 
 		if (value instanceof Map) {
 			clone = new Map();
@@ -108,6 +111,10 @@ export class Serializer {
 		
 		if (value instanceof Set) {
 			clone = new Set();
+		}
+
+		if (value instanceof RegExp) {
+			clone = new RegExp(value);
 		}
 		
 		if (value instanceof Buffer) {
@@ -169,7 +176,7 @@ export class Serializer {
 		const t = typeof value;
 
 		if (t === 'object') {
-			return value.constructor?.name || 'null';
+			return value.constructor?.name ?? 'null';
 		}
 
 		if (t === 'function' || t === 'symbol') {
@@ -179,33 +186,39 @@ export class Serializer {
 		return PrimitiveType[t];
 	}
 	
-	private static serialize(value: any, serialized: Serialized, references: Object[]): Reference | Primitive {
-		const type = this.typeCheck(value);
+	private static serialize(value: any, serialized: Serialized, references: Object[] = []): Reference | Primitive {
+		const type: string | PrimitiveType = this.typeCheck(value);
 		
 		if (typeof type === 'string') {
-			for (const index in references) if (references[index] === value) return Number(index);
 
-			const index = references.push(value) - 1;
-			const ref: ObjectPrimitive = [type, []];
+			for (const index in references) {
+				if (references[index] === value) {
+					return Number(index);
+				}
+			}
+
+			const index: number = references.push(value) - 1;
+			const content: (ObjectContainer | MapContainer | SetContainer)[] = [];
+			const ref: ObjectPrimitive = [type, content];
 			
 			serialized.references.push(ref);
 
 			if (value instanceof Map) {
 				value.forEach((v: any, k: any) => {
-					const container: MapContainer = [ContainerType.map, 0, 0];
+					const container: MapContainer = [ContainerType.Map, 0, 0];
 					container[1] = Serializer.serialize(k, serialized, references);
 					container[2] = Serializer.serialize(v, serialized, references);
 
-					ref[1].push(container);
+					content.push(container);
 				});
 			}
 			
 			if (value instanceof Set) {
 				value.forEach((v: any) => {
-					const container: SetContainer = [ContainerType.set, 0];
+					const container: SetContainer = [ContainerType.Set, 0];
 					container[1] = Serializer.serialize(v, serialized, references);
 
-					ref[1].push(container);
+					content.push(container);
 				});
 			}
 			
@@ -239,10 +252,10 @@ export class Serializer {
 					}
 				}
 
-				const container: ObjectContainer = [ContainerType.object, key, 0];
+				const container: ObjectContainer = [ContainerType.Object, key, 0];
 				container[2] = Serializer.serialize(value[key], serialized, references);
 
-				ref[1].push(container);
+				content.push(container);
 			}
 
 			return index;
@@ -257,25 +270,21 @@ export class Serializer {
 				break;
 
 			case PrimitiveType.number:
-				primitive[1] = value.toString();
-				break;
-
 			case PrimitiveType.bigint:
-				primitive[1] = value.toString(36);
+				primitive[1] = value.toString();
 		}
 
 		return primitive;
 	}
 
 	public serialize(value?: any): string {
-		const references: Object[] = [];
 		const serialized: Serialized = {
 			version: Serializer.version,
 			value: 0,
 			references: []
 		};
 
-		serialized.value = Serializer.serialize(value, serialized, references);
+		serialized.value = Serializer.serialize(value, serialized);
 		return JSON.stringify(serialized);
 	}
 
@@ -292,7 +301,7 @@ export class Serializer {
 				return null;
 
 			case PrimitiveType.bigint:
-				return parseInt(<string> primitive[1], 36);
+				return BigInt(primitive[1]);
 
 			case PrimitiveType.number:
 				return Number(primitive[1]);
@@ -302,12 +311,28 @@ export class Serializer {
 		}
 	}
 
-	private static deserialize(serialized: Serialized, references: Object[], prototypes: PrototypeList): any {
+	private static deserialize(serialized: Serialized, constructors: Function[]): any {
+		const references: Object[] = [];
+		const refctr: Function[] = [];
+
 		// Create references
-		for (const r of serialized.references) {
-			const name = r[0];
-			const prototype: any = name === 'null' ? null : (prototypes.get(r[0]) || Object.prototype);
-			const test = Object.setPrototypeOf({}, prototype);
+		for (const i in serialized.references) {
+			const r = serialized.references[i];
+			const name: string = r[0];
+
+			if (name === 'null') {
+				references.push(Object.create(null));
+				continue;
+			}
+
+			const constructor: Function | undefined = constructors.find(c => c.name === name);
+
+			if (!constructor) {
+				throw new Error('Constructor not found "' + name + '"');
+			}
+
+			const test: any = Object.create(constructor.prototype);
+			refctr[i] = constructor;
 
 			if (test instanceof Map) {
 				references.push(new Map());
@@ -354,29 +379,29 @@ export class Serializer {
 
 		// Apply datas to references then apply prototypes
 		for (const i in serialized.references) {
-			const r = serialized.references[i]
+			const r: ObjectPrimitive = serialized.references[i]
 			const reference: any = references[i];
-			const name = r[0];
-			const prototype: any = name === 'null' ? null : (prototypes.get(r[0]) || Object.prototype);
+			const name: string = r[0];
+			const constructor: Function = refctr[i];
 
 			for (const container of r[1]) {
 				let key: any, value: any;
 
 				switch (container[0]) {
-					case ContainerType.object:
+					case ContainerType.Object:
 						key = container[1]
 						value = Serializer.deserializePrimitive(container[2], references);
 						reference[key] = value;
 						break;
 
-					case ContainerType.map:
+					case ContainerType.Map:
 						key = Serializer.deserializePrimitive(container[1], references);
 						value = Serializer.deserializePrimitive(container[2], references);
 
 						reference.set(key, value);
 						break;
 
-					case ContainerType.set:
+					case ContainerType.Set:
 						value = Serializer.deserializePrimitive(container[1], references);
 
 						reference.add(value);
@@ -384,21 +409,22 @@ export class Serializer {
 				}
 			}
 
-			Object.setPrototypeOf(reference, prototype);
+			if (name !== 'null') {
+				Object.setPrototypeOf(reference, constructor.prototype);
+			}
 		}
 
 		return Serializer.deserializePrimitive(serialized.value, references);
 	}
 
 	public deserialize(data: string): any {
-		const references: Object[] = [];
 		const serialized: Serialized = JSON.parse(data);
 
 		if (!serialized || serialized.version !== Serializer.version) {
 			throw new VersionError(Serializer.version, serialized.version);
 		}
 
-		return Serializer.deserialize(serialized, references, this.prototypes);
+		return Serializer.deserialize(serialized, this.constructors);
 	}
 
 }
