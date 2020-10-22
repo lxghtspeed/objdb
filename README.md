@@ -3,7 +3,7 @@
 
 # Overview
 Objdb is a module containing features allowing you to manage an object that is being saved automatically [Class: `Database`](#database)
-<a class="type">test</a>
+<a class="type">tadasfasfagasdasfest</a>
 You can store, edit, remove values inside of it, it will all be saved and can be accessed even after a system reboot.
 Basically a database, powerful but not enough, still working on it to make it as good as expected
 
