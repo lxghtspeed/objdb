@@ -56,7 +56,7 @@ You can not use these types inside a database
   - [Class: `Serializer`](#class-sr)
     
     - [Static method: `Serializer.clone([value])`](#sr-clone)
-    - Static property: `Serializer.version`
+    - Static property: `Serializer.version` [`<string>`]
     - [Static property: `Serializer.defaultConstructors`](#sr-defaultctr)
     - [`new Serializer([constructors])`](#sr-new)
     - [`serializer.constructors`](#sr-proto-ctr)
@@ -108,14 +108,25 @@ Closes an instance of [`<Database>`] if any, and delete the file corresponding t
 <h3 id ="db-defaultpath">Static property: <code>Database.defaultPath</code></h3>
 
 - Type: [`<string>`]
+- Default: `'./data'`
 
 Allows you to change the default path to folder for every Database instance to create, (will become their default option)
 
 <h3 id ="db-new"><code>new Database([options])</code></h3>
 
-Creates an instance of [`<Database>`] with specified settings, (default settings if omitted)
+- `options` [`<Object>`]
+  - `name` [`<string>`] The name of the database **Default:** `'default'`.
+  - `path` [`<string>`] The path to the folder where the file will be stored **Default:** [Database.defaultPath](#db-defaultpath).
+  - `defaults` [`<Object>`] The default values, **Default:** `{}`.
+  - `constructors` [`<Array>`] The constructors to use for the prototype restorer **Default:** `[]`.
+  - `interval` [`<number>`] The interval which the automatic saving system will check for changes then save, **Minimum:** `1000` **Never:** `Infinity` **Default:** `16000`.
+  - `backupInterval` [`<number>`] The interval in hours which the backup system will make a new backup **Default:** `12`
+  - `maxBackups` [`<number>`] Limits the count of backups **Default:** `6`.
+  - Returns: a new instance if the file is not already opened, once opened every calls to `new` will return the same instance, you can use [`db.close()`](#db-proto-close) to close a [`<Database>`]
 
-**Note:** Creating an instance is considered opening
+Creates an instance with specified settings, (default settings if omitted)
+
+The full path of the data file is formated as *`path`/`name`.json*
 
 <h3 id ="db-proto-save"><code>db.save()</code></h3>
 
@@ -231,6 +242,8 @@ console.log(o2);
 [`<boolean>`]: https://developer.mozilla.org/en-US/docs/Glossary/Boolean
 [`<undefined>`]: https://developer.mozilla.org/en-US/docs/Glossary/Undefined
 [`<Promise>`]: https://developer.mozilla.org/fr/docs/Web/JavaScript/Reference/Objets_globaux/Promise
+[`<Object>`]: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object
+[`<Array>`]: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array
 
 [`<Database>`]: #class-db
 [`<BackupManager>`]: #class-bm
