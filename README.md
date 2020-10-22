@@ -1,22 +1,13 @@
-
-<link rel="stylesheet" type="text/css" media="all" href="https://fonts.googleapis.com/css?family=Lato:400,700,400italic&display=fallback"/>
-<link rel="stylesheet" type="text/css" media="all" href="https://nodejs.org/dist/latest-v12.x/docs/api/assets/style.css"/>
-<link rel="stylesheet" type="text/css" media="all" href="https://nodejs.org/dist/latest-v12.x/docs/api/assets/hljs.css"/>
-
 # Overview
-Objdb is a module containing features allowing you to manage an object that is being saved automatically [Class: `Database`](#database)
-<a class="type">tadasfasfagasdasfest</a>
-You can store, edit, remove values inside of it, it will all be saved and can be accessed even after a system reboot.
-Basically a database, powerful but not enough, still working on it to make it as good as expected
+Objdb is a module containing features allowing you to manage an object that is being saved automatically [Class: `Database`](#class-db) it also provides a Serialization API [Class: `Serializer`](#class-sr)
+
+powerful but not enough, still working on it to make it as good as expected.
 
 Requires **Node.js 11** or higher version
 
 ## Project's advancement
-- [x] Strongly typed (TypeScript)
-- [x] Stores in a local file
-- [x] Easy prototype restoring
-- [x] Provides own [Serialization API](#serialization-api)
-- [x] Support of circular structured objects and objects that are referenced several times
+- [x] Supports [JavaScript's OOP](https://developer.mozilla.org/en-US/docs/Learn/JavaScript/Objects/Object-oriented_JS)
+- [x] Provides own Serialization API
 - [x] Backup system
 - [ ] Client and Server: remotely operate over the data
 
@@ -36,17 +27,17 @@ You can not use these types inside a database
 # Quick Documentation
 - [**Objdb**](#objdb)
   - [Class: `Database`](#class-db)
-    - [`Database.delete(database)`](#db-delete-1)
-    - [`Database.delete(name[, path])`](#db-delete-2)
-    - `Database.defaultPath` [\<string>]()
+    - [Static method: `Database.delete(database)`](#db-delete)
+    - [Static method: `Database.delete(name[, path])`](#db-delete)
+    - [Static property: `Database.defaultPath`](#db-defaultpath)
     - [`new Database([options])`](#db-new)
-    - [`database.save()`](#db-proto-save)
-    - [`database.forceSave()`](#db-proto-forcesave)
-    - [`database.close()`](#db-proto-close)
-    - `database.backups` [\<BackupManager>](#class-bm)
+    - [`db.save()`](#db-proto-save)
+    - [`db.forceSave()`](#db-proto-forcesave)
+    - [`db.close()`](#db-proto-close)
+    - `db.backups` [`<BackupManager>`]
     - [Event: `save`](#db-event-save)
     - [Event: `backup`](#db-event-backup)
-  - [Class: `BackupManager`](#class-bm) private
+  - [Class: `BackupManager`](#class-bm) *private*
     - [`backups.create()`](#bm-proto-create)
     - [`backups.max`](#bm-proto-max)
     - [`backups.interval`](#bm-proto-interval)
@@ -54,7 +45,7 @@ You can not use these types inside a database
     - [`backups.oldest`](#bm-proto-oldest)
     - [`backups.latest`](#bm-proto-latest)
     - [`backups.count`](#bm-proto-count)
-  - [Class: `Backup`](#class-backup) private
+  - [Class: `Backup`](#class-backup) *private*
     - [`backup.delete()`](#backup-proto-delete)
     - [`backup.load()`](#backup-proto-load)
     - [`backup.save()`](#backup-proto-save)
@@ -64,22 +55,38 @@ You can not use these types inside a database
     
   - [Class: `Serializer`](#class-sr)
     
-    - [`Serializer.clone([value])`](#sr-clone)
-    - `Serializer.version`
-    - [`Serializer.defaultConstructors`](#sr-defaultctr)
+    - [Static method: `Serializer.clone([value])`](#sr-clone)
+    - Static property: `Serializer.version`
+    - [Static property: `Serializer.defaultConstructors`](#sr-defaultctr)
     - [`new Serializer([constructors])`](#sr-new)
     - [`serializer.constructors`](#sr-proto-ctr)
     - [`serializer.serialize([value])`](#sr-proto-serialize)
     - [`serializer.deserialize(data)`](#sr-proto-deserialize)
 
 # Objdb
+The module's structure is like a namespace containing classes.
+Common way to require/import objdb:
 ```js
 const { /* Classes... */ } = require('objdb');
 ```
+```ts
+import { /* Classes... */ } from 'objdb';
+```
 <h2 id="class-db">Class: <code>Database</code></h2>
+Once the instance created, you can store, edit, remove values inside of it, it will all be saved automatically.
 
+Supports JavaScript's OOP via [prototype restoring](#db-new).
+
+This class is avaiable in the module's namespace:
 ```js
-const db = new Database(); // Stored in ./data/default.json
+const { Database } = require('objdb');
+```
+
+#### Example
+```js
+// Creates an instance of Database with default settings
+const db = new Database();
+// Will be stored in ./data/default.json
 // Note: It does not save unless you modify
 
 db.test = 'successful';
@@ -89,21 +96,34 @@ db.some.set('more', 'datas');
 // Optional
 test.save();
 ```
-<h3 id="db-delete-1"><code>Database.delete(database)</code></h3>
+<h3 id="db-delete">Static method: <code>Database.delete(database)</code> <code>Database.delete(name[, path])</code></h3>
 
-<h3 id="db-delete-2"><code>Database.delete(name[, path])</code></h3>
+- `database` [`<Database>`]
+- `name` [`<string>`] the name of the database
+- `path` [`<string>`] the path to folder
+- Returns: A [`<Promise>`] resolving the success of the operation in [`<boolean>`]
 
-<h3 id ="db-defaultpath"><code>Database.defaultPath</code></h3>
+Closes an instance of [`<Database>`] if any, and delete the file corresponding to the database and it's backups
+
+<h3 id ="db-defaultpath">Static property: <code>Database.defaultPath</code></h3>
+
+- Type: [`<string>`]
+
+Allows you to change the default path to folder for every Database instance to create, (will become their default option)
 
 <h3 id ="db-new"><code>new Database([options])</code></h3>
 
-<h3 id ="db-proto-save"><code>database.save()</code></h3>
+Creates an instance of [`<Database>`] with specified settings, (default settings if omitted)
 
-<h3 id ="db-proto-forcesave"><code>database.forceSave()</code></h3>
+**Note:** Creating an instance is considered opening
 
-<h3 id ="db-proto-close"><code>database.close()</code></h3>
+<h3 id ="db-proto-save"><code>db.save()</code></h3>
 
-<h3 id ="db-proto-backups"><code>database.backups</code></h3>
+<h3 id ="db-proto-forcesave"><code>db.forceSave()</code></h3>
+
+<h3 id ="db-proto-close"><code>db.close()</code></h3>
+
+<h3 id ="db-proto-backups"><code>db.backups</code></h3>
 
 <h3 id ="db-event-save">Event: <code>save</code></h3>
 
@@ -140,6 +160,18 @@ test.save();
 <h3 id="backup-proto-createdat"><code>backup.createdAt</code></h3>
 
 <h2 id="class-sr">Class: <code>Serializer</code></h2>
+
+<h3 id="sr-clone">Static method: <code>Serializer.clone([value])</code></h3>
+
+<h3 id="sr-defaultctr">Static property: <code>Serializer.defaultConstructors</code></h3>
+
+<h3 id="sr-new"><code>new Serializer([constructors])</code></h3>
+
+<h3 id="sr-proto-ctr"><code>serializer.constructors</code></h3>
+
+<h3 id="sr-proto-serialize"><code>serializer.serialize([value])</code></h3>
+
+<h3 id="sr-proto-deserialize"><code>serializer.deserialize(data)</code></h3>
 
 # Examples
 
@@ -193,3 +225,14 @@ console.log(o2);
  *   { '0': /ab+c/i, testing: Infinity, serialization: <Buffer 61 73 64> }
  */
 ```
+
+[`<string>`]:  https://developer.mozilla.org/fr/docs/Web/JavaScript/Reference/Objets_globaux/String
+[`<number>`]: https://developer.mozilla.org/en-US/docs/Glossary/Number
+[`<boolean>`]: https://developer.mozilla.org/en-US/docs/Glossary/Boolean
+[`<undefined>`]: https://developer.mozilla.org/en-US/docs/Glossary/Undefined
+[`<Promise>`]: https://developer.mozilla.org/fr/docs/Web/JavaScript/Reference/Objets_globaux/Promise
+
+[`<Database>`]: #class-db
+[`<BackupManager>`]: #class-bm
+[`<Backup>`]: #class-backup
+[`<Serializer>`]: #class-sr
