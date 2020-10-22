@@ -1,5 +1,7 @@
 
+<link rel="stylesheet" type="text/css" media="all" href="https://fonts.googleapis.com/css?family=Lato:400,700,400italic&display=fallback"/>
 <link rel="stylesheet" type="text/css" media="all" href="https://nodejs.org/dist/latest-v12.x/docs/api/assets/style.css"/>
+<link rel="stylesheet" type="text/css" media="all" href="https://nodejs.org/dist/latest-v12.x/docs/api/assets/hljs.css"/>
 
 # Overview
 Objdb is a module containing features allowing you to manage an object that is being saved automatically [Class: `Database`](#database)
