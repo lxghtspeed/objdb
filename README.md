@@ -14,7 +14,7 @@ Requires **Node.js 11** or higher version
 ## Supported data types
 It supports the most of :
 - the instances of the built-in classes **`Object` `Array` `Map` `Set` `Date` `Buffer` `RegExp` `String` `Boolean` `Number`**
-- the primitive types `string` `number` `boolean` `object` `bigint` `undefined` `null`
+- the primitive types `string` `number` `boolean` `bigint` `undefined` `null`
 
 ## Limits
 You can not use these types inside a database
@@ -57,9 +57,9 @@ You can not use these types inside a database
     - Static property: `Serializer.version` [`<string>`]
     - [Static property: `Serializer.defaultConstructors`](#sr-defaultctr)
     - [`new Serializer([constructors])`](#sr-new)
-    - [`serializer.constructors`](#sr-proto-ctr)
-    - [`serializer.serialize([value])`](#sr-proto-serialize)
-    - [`serializer.deserialize(data)`](#sr-proto-deserialize)
+    - [`ser.constructors`](#sr-proto-ctr)
+    - [`ser.serialize([value])`](#sr-proto-serialize)
+    - [`ser.deserialize(data)`](#sr-proto-deserialize)
 
 # Objdb
 
@@ -121,6 +121,21 @@ Creates an instance with specified settings, (default settings if omitted).
 
 The full path of the data file is formated as *`path`/`name`.json*
 
+#### Example
+
+```js
+class Player { /* Imagination */ }
+class Sword { /* Imagination */ }
+
+const db = new Database({
+	name: 'fantastic',
+	defaults: {
+		players: new Map();
+	},
+	constructors: [ Player, Sword ]
+});
+```
+
 <h3 id ="db-proto-save"><code>db.save()</code></h3>
 
 Attempts to save, cancels the operation if no changes were found.
@@ -154,7 +169,7 @@ This event is triggered whenever a save operation is completed.
 
 <h3 id ="db-event-backup">Event: <code>backup</code></h3>
 
-- backup [`<Backup>`] the backup that has been created.
+- `backup` [`<Backup>`] the backup that has been created.
 
 This event is triggered whenever a backup is being created.
 
@@ -170,17 +185,17 @@ Creates a new backup and deletes the oldest one if the backups count limit is re
 
 <h3 id="bm-proto-cache"><code>backups.cache</code></h3>
 
-- Type: An [`<Array>`] of [`<Backup>`]
+- Type: An [`<Array>`] of [`<Backup>`].
 
 <h3 id="bm-proto-oldest"><code>backups.oldest</code></h3>
 
-- Type: [`<Backup>`] or [`<undefined>`]
+- Type: [`<Backup>`] or [`<undefined>`].
 
 Returns the oldest cached backup.
 
 <h3 id="bm-proto-latest"><code>backups.latest</code></h3>
 
-- Type: [`<Backup>`] or [`<undefined>`]
+- Type: [`<Backup>`] or [`<undefined>`].
 
 Returns the oldest cached backup.
 
@@ -196,19 +211,17 @@ Deletes the corresponding backup file to this instance.
 
 <h3 id="backup-proto-load"><code>backup.load()</code></h3>
 
-Loads values from the backup into the corresponding [`<Database>`] to this instance
+Loads values from the backup into the corresponding [`<Database>`] to this instance.
 
 <h3 id="backup-proto-save"><code>backup.save()</code></h3>
 
-Saves the values from the corresponding [`<Database>`] into the corresponding backup file
+Saves the values from the corresponding [`<Database>`] into the corresponding backup file.
 
 <h2 id="class-sr">Class: <code>Serializer</code></h2>
 
-Allows you to convert mostly all of the JavaScript's values into [`<string>`]
+Allows you to convert mostly all of the JavaScript's values into [`<string>`].
 
-It makes OOP operations possible on parsed values
-
-Circular and multiple referenced objects will also be conserved
+OOP is conserved as well as circular and multiple referenced objects.
 
 This class is avaiable in the module's namespace:
 ```js
@@ -218,64 +231,55 @@ const { Serializer } = require('objdb');
 <h3 id="sr-clone">Static method: <code>Serializer.clone([value])</code></h3>
 
  - `value` [`<any>`]
- - Returns: a clone of `value`
+ - Returns: a clone of `value`.
 
-Clones `value`
+Clones `value`.
 
 <h3 id="sr-defaultctr">Static property: <code>Serializer.defaultConstructors</code></h3>
 
- - Type: An [`<Array>`] of [`<Constructor>`]
+ - Type: An [`<Array>`] of [`<Constructor>`].
+
+Contains `Object` `Array` `Map` `Set` `Buffer` `Date` `RegExp` `String` `Boolean` `Number` by default.
 
 <h3 id="sr-new"><code>new Serializer([constructors])</code></h3>
 
-<h3 id="sr-proto-ctr"><code>serializer.constructors</code></h3>
+- `constructors` [`<Array>`] An array of [`<Constructor>`] that makes possible OOP operations on parsed data, extends [`Serializer.defaultConstructors`](#sr-defaultctr) **Default:**`[]`.
 
-<h3 id="sr-proto-serialize"><code>serializer.serialize([value])</code></h3>
+Creates an instance with specified constructors.
+
+<h3 id="sr-proto-ctr"><code>ser.constructors</code></h3>
+
+ - Type:  An [`<Array>`] of [`<Constructor>`]
+
+The constructors that is used to restore prototypes of data when parsing.
+
+<h3 id="sr-proto-serialize"><code>ser.serialize([value])</code></h3>
+
+ - `value` [`<any>`] The value to serialize.
+ - Returns: [`<string>`]
+
+Serializes `value` to string with a weird JSON structure containing few properties:
+
+ - `version` [`<string>`] Representing the version of the serializer
+ - `value` [`<number>`] Indexing the references, may be the reference itself when `value` is primitive
+ - `references` An [`<Array>`] containing references as complex structures
 
 ```js
-const s = new Serializer();
+const sr = new Serializer();
 
-// An object
+// An object to serialize
 const o = { testing: Infinity, serialization: Buffer.from('asd'), [0]: /ab+c/i };
 
-// {"version":"1.0","value":0,"references":[["Object",[[0,"0",1],[0,"testing",[3,"Infinity"]],[0,"serialization",2]]],["RegExp",[],"ab+c","i"],["Buffer",[],"YXNk"]]}
-/* Output:
- *   { '0': /ab+c/i, testing: Infinity, serialization: <Buffer 61 73 64> }
- *   
- *   { '0': /ab+c/i, testing: Infinity, serialization: <Buffer 61 73 64> }
- */
+sr.serialize(o);
+// '{"version":"1.0","value":0,"references":[["Object",[[0,"0",1],[0,"testing",[3,"Infinity"]],[0,"serialization",2]]],["RegExp",[],"ab+c","i"],["Buffer",[],"YXNk"]]}'
 ```
-<h3 id="sr-proto-deserialize"><code>serializer.deserialize(data)</code></h3>
+<h3 id="sr-proto-deserialize"><code>ser.deserialize(data)</code></h3>
 
-# Examples
+ - `data` [`<string>`] The serialized value to parse
+ - Returns: [`<any>`]
 
-## Prototype restoring
-```js
-const { Database } = require('objdb');
+Parses `data` to return a clone of the value that has been serialized using [`ser.serialize([value])`](#sr-proto-serialize)
 
-class Player { /* Imagination */ }
-class Sword { /* Imagination */ }
-
-/* Initialization of the database */
-const db = new Database({
-	defaults: {
-		players: new Map();
-	},
-	/* Add the constructors here */
-	constructors: [ Player, Sword ]
-});
-
-// Supposed to be of type Player
-const p1 = db.players.get('xXProKillerXx');
-const p2 = db.players.get('Imagination');
-
-// Supposed to be of type Sword
-const sword = p1.inventory[0];
-
-p1.attack(p2, sword);
-```
-
-## Serialization API
 
 [`<string>`]:  https://developer.mozilla.org/fr/docs/Web/JavaScript/Reference/Objets_globaux/String
 [`<number>`]: https://developer.mozilla.org/en-US/docs/Glossary/Number
