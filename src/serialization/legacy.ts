@@ -1,5 +1,5 @@
 import { PrototypeList } from '../utility';
-import { SerializationError } from '.';
+import { SerializationError } from './latest';
 
 interface Element<T extends 'object' | 'bigint' | 'number' | 'boolean' | 'string' | 'undefined' | 'null'> extends Array<any> {
 	[0]: T;

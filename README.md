@@ -171,7 +171,7 @@ This event is triggered whenever a save operation is completed.
 
 - `backup` [`<Backup>`] the backup that has been created.
 
-This event is triggered whenever a backup is being created.
+This event is triggered whenever a backup has been created.
 
 <h2 id="class-bm">Class: <code>BackupManager</code></h2>
 
@@ -197,7 +197,7 @@ Returns the oldest cached backup.
 
 - Type: [`<Backup>`] or [`<undefined>`].
 
-Returns the oldest cached backup.
+Returns the latest cached backup.
 
 <h2 id="class-backup">Class: <code>Backup</code></h2>
 
