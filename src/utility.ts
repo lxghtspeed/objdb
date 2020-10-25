@@ -5,19 +5,19 @@ export class Internal<T extends Object> {
 
     private static instances = new WeakMap<Internal<Object>, Object>();
 
-	/**
-	 * Initializes a new instance of the Internal class
-	 * @param value the default internal object
-	 */
-	constructor(value: T) {
+    /**
+     * Initializes a new instance of the Internal class
+     * @param value the default internal object
+     */
+    constructor(value: T) {
         Internal.instances.set(this, value);
-	}
+    }
 
-	/**
-	 * Obtains the internal object of the current object
-	 */
-	protected get internal(): T {
-		return <T> Internal.instances.get(this);
+    /**
+     * Obtains the internal object of the current object
+     */
+    protected get internal(): T {
+        return <T> Internal.instances.get(this);
     }
 
 }
@@ -113,8 +113,8 @@ export class PrototypeList {
 
 export class VersionError extends Error {
 
-	constructor(expected: string, got?: string) {
-		super(`Expected version: ${expected}, got ${got || 'unknown version'} (incompatible)`);
-	}
+    constructor(expected: string, got?: string) {
+        super(`Expected version: ${expected}, got ${got || 'unknown version'} (incompatible)`);
+    }
 
 }
