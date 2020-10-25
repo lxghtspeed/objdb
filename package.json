@@ -1,6 +1,6 @@
 {
   "name": "objdb",
-  "version": "1.7.2",
+  "version": "1.7.3",
   "description": "A database that supports Javascript OOP, saved automatically or manually.",
   "keywords": [
     "objdb",
@@ -8,6 +8,7 @@
     "oop",
     "serialization"
   ],
+  "repository": "github:lxghtspeed/objdb",
   "license": "ISC",
   "main": "out",
   "scripts": {
