@@ -17,7 +17,7 @@
     "test-db": "runm --test-db"
   },
   "deprecated": false,
-  "bundleDependencies": false,
+  "bundleDependencies": [],
   "dependencies": {},
   "devDependencies": {
     "@types/node": "^14.14.2",
