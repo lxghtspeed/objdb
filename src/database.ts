@@ -49,7 +49,7 @@ interface DatabaseOptions {
 	 * 
 	 * You can eventually call **.save()** or **.forceSave()** instead of using automatic saving
 	 * 
-	 * minimum: `1000`, never: `Infinity`, default: `16000`
+	 * minimum: `1000`, never: `Infinity`, default: `8000`
 	 */
 	interval?: number;
 
@@ -63,7 +63,7 @@ interface DatabaseOptions {
 	/**
 	 * The interval in hours which a backup is created
 	 * 
-	 * default: `12`
+	 * minimum: `1`, never: `Infinity`, default: `8`
 	 */
 	backupInterval?: number;
 }
@@ -167,6 +167,14 @@ class BackupManager {
 			while (this.cache.length > this.max) {
 				this.oldest?.delete();
 			}
+
+			this.cache = this.cache.sort((a, b) => {
+				return a.createdAt.getTime() - b.createdAt.getTime();
+			})
+		}
+
+		if (interval === Infinity) {
+			return
 		}
 
 		if (!FileSystem.existsSync(internal.fullPath)) {
@@ -218,11 +226,11 @@ class BackupManager {
 	}
 
 	public get oldest(): Backup | undefined {
-		return this.cache.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())[0];
+		return this.cache[0];
 	}
 
 	public get latest(): Backup | undefined {
-		return this.cache.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0];
+		return this.cache[this.cache.length - 1];
 	}
 
 }
@@ -239,7 +247,7 @@ class DBInternal {
 
 	public readonly emitter: EventEmitter;
 
-	public timers: Record<string, NodeJS.Timeout> = {};
+	public timers: Record<string, NodeJS.Timeout>;
 
 	public data!: string;
 
@@ -257,6 +265,7 @@ class DBInternal {
 		this.fullPath = fullPath;
 		this.serializer = new Serializer([ Database, LocalFile ]);
 		this.emitter = new EventEmitter();
+		this.timers = {};
 		this.lastSaveAttempt = 0;
 	}
 
@@ -280,10 +289,22 @@ export class Database extends Internal<DBInternal> {
 		path = Database.defaultPath,
 		defaults = {},
 		constructors = [],
-		interval = 16000,
-		backupInterval = 12,
+		interval = 8000,
+		backupInterval = 8,
 		maxBackups = 6,
 	}: DatabaseOptions = {}) {
+		if (interval < 1000) {
+			throw new RangeError('the parameter "interval" is out of range');
+		}
+
+		if (backupInterval < 1000) {
+			throw new RangeError('the parameter "interval" is out of range');
+		}
+
+		if (maxBackups < 0) {
+			throw new RangeError('the parameter "maxBackups" is out of range');
+		}
+
 		const fullPath: string = Path.resolve(Path.join(path, name + '.json'));
 		
 		if (fullPath in DBInternal.opened) {

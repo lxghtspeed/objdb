@@ -1,22 +1,26 @@
 # Overview
+
 Objdb is a module containing features allowing you to manage an object that is being saved automatically [Class: `Database`](#class-db) it also provides a Serialization API [Class: `Serializer`](#class-sr)
 
 powerful but not enough, still working on it to make it as good as expected.
 
-Requires **Node.js 11** or higher version
+Requires **Node.js 10** or higher version
 
 ## Project's advancement
+
 - [x] Supports [JavaScript's OOP](https://developer.mozilla.org/en-US/docs/Learn/JavaScript/Objects/Object-oriented_JS)
 - [x] Provides own Serialization API
 - [x] Backup system
 - [ ] Client and Server: remotely operate over the data
 
 ## Supported data types
+
 It supports the most of :
 - the instances of the built-in classes **`Object` `Array` `Map` `Set` `Date` `Buffer` `RegExp` `String` `Boolean` `Number`**
 - the primitive types `string` `number` `boolean` `bigint` `undefined` `null`
 
 ## Limits
+
 You can not use these types inside a database
 - [Function / Class constructor / Generator function](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Functions)
 - [Symbol](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Symbol)
@@ -25,6 +29,7 @@ You can not use these types inside a database
 - and more
 
 # Quick Documentation
+
 - [**Objdb**](#objdb)
   - [Class: `Database`](#class-db)
     - [Static property: `Database.defaultPath`](#db-defaultpath)
@@ -50,9 +55,7 @@ You can not use these types inside a database
     - `backup.name` [`<string>`]
     - `backup.fullPath` [`<string>`]
     - `backup.createdAt` [`<Date>`]
-    
   - [Class: `Serializer`](#class-sr)
-    
     - [Static method: `Serializer.clone([value])`](#sr-clone)
     - Static property: `Serializer.version` [`<string>`]
     - [Static property: `Serializer.defaultConstructors`](#sr-defaultctr)
@@ -64,13 +67,17 @@ You can not use these types inside a database
 # Objdb
 
 The module's structure is like a namespace containing classes.
+
 Common way to require/import objdb:
+
 ```js
 const { /* Classes... */ } = require('objdb');
 ```
+
 ```ts
 import { /* Classes... */ } from 'objdb';
 ```
+
 <h2 id="class-db">Class: <code>Database</code></h2>
 
 Once the instance is created, you can store, edit, remove values inside of it, it will all be saved automatically.
@@ -78,6 +85,7 @@ Once the instance is created, you can store, edit, remove values inside of it, i
 Supports JavaScript's OOP via [prototype restoring](#db-new).
 
 This class is avaiable in the module's namespace:
+
 ```js
 const { Database } = require('objdb');
 ```
@@ -112,8 +120,8 @@ Allows you to change the default path to folder for every Database instance to c
   - `path` [`<string>`] The path to the folder where the file will be stored **Default:** [`Database.defaultPath`](#db-defaultpath).
   - `defaults` [`<Object>`] The default values, **Default:** `{}`.
   - `constructors` [`<Array>`] The constructors to use for the prototype restorer **Default:** `[]`.
-  - `interval` [`<number>`] The interval which the automatic saving system will check for changes then save, **Minimum:** `1000` **Never:** `Infinity` **Default:** `16000`.
-  - `backupInterval` [`<number>`] The interval in hours which the backup system will make a new backup **Default:** `12`.
+  - `interval` [`<number>`] The interval which the automatic saving system will check for changes then save, **Minimum:** `1000` **Never:** `Infinity` **Default:** `8000`.
+  - `backupInterval` [`<number>`] The interval in hours which the backup system will make a new backup **Minimum:** `1` **Never:** `Infinity` **Default:** `8`.
   - `maxBackups` [`<number>`] Limits the count of backups **Default:** `6`.
   - Returns: a new instance if the file is not already opened, once opened every calls to `new` will return the same instance, you can use [`db.close()`](#db-proto-close) to close a [`<Database>`].
 
@@ -128,11 +136,11 @@ class Player { /* Imagination */ }
 class Sword { /* Imagination */ }
 
 const db = new Database({
-	name: 'fantastic',
-	defaults: {
-		players: new Map();
-	},
-	constructors: [ Player, Sword ]
+  name: 'fantastic',
+  defaults: {
+    players: new Map();
+  },
+  constructors: [ Player, Sword ]
 });
 ```
 
@@ -161,7 +169,6 @@ This instance will not be an instance of [`<Database>`] anymore, and thus, you w
 - Returns: A [`<Promise>`] resolving [`<undefined>`] once the operation is done.
 
 Closes this instance (with [`db.close()`](#db-proto-close)), then deletes the corresponding file and it's backups.
-
 
 <h3 id ="db-event-save">Event: <code>save</code></h3>
 
@@ -224,6 +231,7 @@ Allows you to convert mostly all of the JavaScript's values into [`<string>`].
 OOP is conserved as well as circular and multiple referenced objects.
 
 This class is avaiable in the module's namespace:
+
 ```js
 const { Serializer } = require('objdb');
 ```
@@ -273,6 +281,7 @@ const o = { testing: Infinity, serialization: Buffer.from('asd'), [0]: /ab+c/i }
 sr.serialize(o);
 // '{"version":"1.0","value":0,"references":[["Object",[[0,"0",1],[0,"testing",[3,"Infinity"]],[0,"serialization",2]]],["RegExp",[],"ab+c","i"],["Buffer",[],"YXNk"]]}'
 ```
+
 <h3 id="sr-proto-deserialize"><code>ser.deserialize(data)</code></h3>
 
  - `data` [`<string>`] The serialized value to parse

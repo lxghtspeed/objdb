@@ -10,7 +10,7 @@ export class Internal<T extends Object> {
 	 * @param value the default internal object
 	 */
 	constructor(value: T) {
-		Internal.instances.set(this, value);
+        Internal.instances.set(this, value);
 	}
 
 	/**
