@@ -1,6 +1,6 @@
 {
   "name": "objdb",
-  "version": "1.7.3",
+  "version": "1.7.4",
   "description": "A database that supports Javascript OOP, saved automatically or manually.",
   "keywords": [
     "objdb",
