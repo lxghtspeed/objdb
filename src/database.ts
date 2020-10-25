@@ -297,8 +297,8 @@ export class Database extends Internal<DBInternal> {
             throw new RangeError('the parameter "interval" is out of range');
         }
 
-        if (backupInterval < 1000) {
-            throw new RangeError('the parameter "interval" is out of range');
+        if (backupInterval < 1) {
+            throw new RangeError('the parameter "backupInterval" is out of range');
         }
 
         if (maxBackups < 0) {
