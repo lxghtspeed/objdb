@@ -1,3 +1,5 @@
+import Timers from 'timers';
+
 export class Internal<T extends Object> {
 
     private static instances = new WeakMap<Internal<Object>, Object>();
@@ -15,6 +17,132 @@ export class Internal<T extends Object> {
      */
     protected get internal(): T {
         return <T> Internal.instances.get(this);
+    }
+
+}
+
+export class Timer {
+
+    public callback: (...args: any[]) => any;
+
+    private createdAt: number;
+
+    private lastExec: number;
+
+    private interval: number;
+
+    private enabled: boolean;
+
+    private timeout?: NodeJS.Timeout;
+
+    constructor(callback: (...args: any[]) => any, interval: number) {
+        this.callback = callback;
+        this.createdAt = Date.now();
+        this.lastExec = Date.now();
+        this.interval = interval;
+        this.enabled = false;
+    }
+
+    private readonly onInterval = (): void => {
+        this.lastExec = Date.now();
+
+        this.callback();
+    
+        const totalExecs = Math.floor((this.lastExec - this.createdAt) / this.interval);
+        const nextExec = this.createdAt + (totalExecs + 1) * this.interval;
+        
+        this.timeout = Timers.setTimeout(this.onInterval, nextExec - Date.now());
+    }
+
+    public start(): void {
+        if (this.enabled) {
+            return;
+        }
+
+        this.enabled = true;
+        this.createdAt = Date.now();
+        this.timeout = Timers.setTimeout(this.onInterval, this.interval);
+    }
+
+    public stop(): void {
+        if (!this.enabled) {
+            return;
+        }
+
+        this.enabled = false;
+
+        if (this.timeout) {
+            Timers.clearTimeout(this.timeout);
+        }
+    }
+
+    public isEnabled(): boolean {
+        return this.enabled;
+    }
+
+    public getInterval(): number {
+        return this.interval;
+    }
+
+    public setInterval(value: number): number {
+        if (this.timeout) {
+            Timers.clearTimeout(this.timeout);
+
+            const totalExecs = Math.floor((this.lastExec - this.createdAt) / this.interval);
+            const nextExec = this.createdAt + (totalExecs * this.interval) + value;
+            
+            this.timeout = Timers.setTimeout(this.onInterval, nextExec - Date.now());
+        }
+
+        this.interval = value;
+        return value;
+    }
+
+}
+
+export class Timeout {
+
+    public callback: (...args: any[]) => any;
+
+    private time: number;
+
+    private enabled: boolean;
+
+    private timeout?: NodeJS.Timeout;
+
+    constructor(callback: (...args: any[]) => any, time: number) {
+        this.callback = callback;
+        this.time = time;
+        this.enabled = false;
+    }
+
+    private onTimeout = (): void => {
+        this.callback();
+    }
+
+    public start(): void {
+        if (this.enabled) {
+            return;
+        }
+
+        this.enabled = true;
+        this.timeout = Timers.setTimeout(this.onTimeout, this.time);
+    }
+
+    public stop(): void {
+        if (!this.enabled) {
+            return;
+        }
+
+        this.enabled = false;
+
+        if (this.timeout) {
+            Timers.clearTimeout(this.timeout);
+        }
+    }
+
+    public isEnabled(): boolean {
+        return this.enabled;
     }
 
 }

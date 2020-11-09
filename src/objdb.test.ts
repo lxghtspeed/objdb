@@ -1,4 +1,4 @@
-import { Database } from './objdb';
+import { Objdb } from './objdb';
 import { Serializer } from './serialization';
 
 class Restorable extends Map<any, any> {
@@ -26,15 +26,17 @@ export class TestZone {
     public static main(args: string[]): void {
         console.log('testing...');
 
-        if (args[0] === '--test-serialization') {
+        if (args[0] == '--test-serialization') {
             TestZone.serialization();
             return;
         }
 
-        if (args[0] === '--test-db') {
+        if (args[0] == '--test-db') {
             TestZone.database();
             return;
         }
+
+        if (args[0] == '')
 
         console.error('test not found.')
     }
@@ -74,9 +76,10 @@ export class TestZone {
      * and the console logging "saved" before exit
      */
     public static async database(): Promise<void> {
-        const db = new Database({ interval: Infinity });
+        const db: Record<string, any> = {};
+        new Objdb(db);
 
-        db.on('save', () => console.log('saved'));
+        // objdb.on('save', () => console.log('saved'));
 
         db.test = new Restorable();
     }

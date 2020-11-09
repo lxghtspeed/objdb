@@ -390,7 +390,7 @@ export class Serializer {
                 continue;
             }
 
-            const constructor: Function | undefined = constructors.find(c => c.name === name);
+            const constructor = constructors.find(c => c.name === name);
 
             if (!constructor) {
                 throw new Error('Constructor not found "' + name + '"');
