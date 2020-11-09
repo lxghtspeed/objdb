@@ -1,8 +1,8 @@
 import FileSystem from 'fs';
 import Path from 'path';
-import { Serializer } from './objdb.serialization';
+import { Serializer } from './serialization';
 
-export { Serializer } from './objdb.serialization';
+export { Serializer } from './serialization';
 
 export class Objdb {
 

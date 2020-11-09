@@ -1,5 +1,5 @@
 import { Database } from './objdb';
-import { Serializer } from './objdb.serialization';
+import { Serializer } from './serialization';
 
 class Restorable extends Map<any, any> {
 

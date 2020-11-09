@@ -1,5 +1,5 @@
 import { PrototypeList } from './objdb.util';
-import { SerializationError } from './objdb.serialization';
+import { SerializationError } from './serialization';
 
 interface Element<T extends 'object' | 'bigint' | 'number' | 'boolean' | 'string' | 'undefined' | 'null'> extends Array<any> {
     [0]: T;
