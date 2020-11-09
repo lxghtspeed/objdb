@@ -1,6 +1,6 @@
 {
   "name": "objdb",
-  "version": "1.7.4",
+  "version": "2.0.0",
   "description": "A database that supports Javascript OOP, saved automatically or manually.",
   "keywords": [
     "objdb",
@@ -20,9 +20,9 @@
   "bundleDependencies": [],
   "dependencies": {},
   "devDependencies": {
-    "@types/node": "^14.14.2",
+    "@types/node": "^14.14.6",
     "discord.js": "^12.4.0",
-    "runm": "^1.1.0",
+    "runm": "^1.2.4",
     "typescript": "^4.0.3"
   }
 }
